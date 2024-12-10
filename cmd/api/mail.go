@@ -48,10 +48,10 @@ func (a *application) SendMail(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendMailGoRoutine(chanErr chan error, payload types.SubscribePayload) {
-	encoded, err := utils.ChangeFontToBase64("public/fonts/Hellion.ttf")
-	if err != nil {
-		chanErr <- err
-	}
+	// encoded, err := utils.ChangeFontToBase64("public/fonts/Hellion.ttf")
+	// if err != nil {
+	// 	chanErr <- err
+	// }
 
 	m := gomail.NewMessage()
 	// firstName := strings.Split(payload.Name, " ")
@@ -76,7 +76,7 @@ func sendMailGoRoutine(chanErr chan error, payload types.SubscribePayload) {
       };
     </style>
 </head>
-<body style="line-height: 1.6; color: #333; padding: 20px; background-color: #f9f9f9;">
+    <body style="font-family: Arial; line-height: 1.6; color: #333; padding: 20px; background-color: #f9f9f9;">
     <table style="width: 100%%; max-width: 600px; margin: 0 auto; background: #000; color: #fff; border-radius: 8px; overflow: hidden;">
         <!-- Header Section -->
         <tr style="text-align: center;">
