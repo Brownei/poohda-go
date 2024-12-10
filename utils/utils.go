@@ -2,11 +2,13 @@ package utils
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -15,6 +17,25 @@ import (
 )
 
 var Validator = validator.New()
+
+func ChangeFontToBase64(laptopPath string) (string, error) {
+	path, err := filepath.Abs(laptopPath)
+	if err != nil {
+		return "", err
+	}
+
+	// Read the font file
+	fontData, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode the font file data to base64
+	encodedFont := base64.StdEncoding.EncodeToString(fontData)
+
+	// Print the base64 string
+	return encodedFont, nil
+}
 
 func WriteJSON(w http.ResponseWriter, status int, payload any) error {
 	w.Header().Add("Content-Type", "application/json")
@@ -82,7 +103,7 @@ func VerifyToken(token string) (string, error) {
 
 	// Check if the token is valid
 	if !verifiedToken.Valid {
-		return "", fmt.Errorf("Not Valid!", err.Error())
+		return "", fmt.Errorf("Not Valid: %v", err)
 	}
 
 	email, _ := verifiedToken.Claims.GetSubject()

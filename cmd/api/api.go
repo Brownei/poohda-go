@@ -52,6 +52,10 @@ func (a *application) Run() error {
 	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	r.Get("/public/*", func(w http.ResponseWriter, r *http.Request) {
+		http.StripPrefix("/public/", http.FileServer(http.Dir("./public"))).ServeHTTP(w, r)
+	})
+
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSON(w, http.StatusOK, fmt.Sprintf("Welcome to Poohda"))
 	})

@@ -38,6 +38,7 @@ func (a *application) SendMail(w http.ResponseWriter, r *http.Request) {
 	go sendMailGoRoutine(chanErr, payload)
 
 	if err := <-chanErr; err != nil {
+		fmt.Print(err)
 		utils.WriteError(w, http.StatusConflict, err)
 		return
 	} else {
@@ -47,31 +48,46 @@ func (a *application) SendMail(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendMailGoRoutine(chanErr chan error, payload types.SubscribePayload) {
+	encoded, err := utils.ChangeFontToBase64("public/fonts/Hellion.ttf")
+	if err != nil {
+		chanErr <- err
+	}
+
 	m := gomail.NewMessage()
 	// firstName := strings.Split(payload.Name, " ")
 	m.SetHeader("From", "noreply@poohda.com")
 	m.SetHeader("To", payload.Email)
 	m.SetAddressHeader("Cc", payload.Email, payload.Name)
 	m.SetHeader("Subject", "You’re on the Waitlist to Be Da Difference")
-	m.SetBody("text/html", `
+	m.SetBody("text/html", fmt.Sprintf(`
     <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      @font-face {
+        font-family: 'Hellion';
+        src: url('http://localhost:8000/public/fonts/Hellion.ttf') format('truetype');
+      };
+
+      body {
+        font-family: 'Hellion', Arial, sans-serif;
+      };
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; background-color: #f9f9f9;">
-    <table style="width: 100%; max-width: 600px; margin: 0 auto; background: #000; color: #fff; border-radius: 8px; overflow: hidden;">
+<body style="line-height: 1.6; color: #333; padding: 20px; background-color: #f9f9f9;">
+    <table style="width: 100%%; max-width: 600px; margin: 0 auto; background: #000; color: #fff; border-radius: 8px; overflow: hidden;">
         <!-- Header Section -->
         <tr style="text-align: center;">
-						<td style="padding: 20px; background-image: url('/public/poohda.png'); background-size: cover; background-position: center;">
-							<h1 style="margin: 0; position: relative; z-index: 1;">The Leader of the Pack</h1>
-						</td>
-					</tr>
+            <td style="padding: 20px; background-image: url('/public/poohda.png'); background-size: cover; background-position: center;">
+                <h1 style="margin: 0; position: relative; z-index: 1;">The Leader of the Pack</h1>
+            </td>
+        </tr>
 
         <!-- Body Section -->
-    <tr >
-    <td style="padding: 20px; ">
+        <tr>
+            <td style="padding: 20px;">
                 <p>
                     You made it to the waitlist to be <strong>Da Difference</strong>—the leader of the pack! That means you’ll be the first to know when our exclusive pieces go live on the PooHDa website.
                 </p>
@@ -80,7 +96,7 @@ func sendMailGoRoutine(chanErr chan error, payload types.SubscribePayload) {
                     Every piece is crafted to break the rules and elevate your style—rare, limited, and unimagined. And you’re at the front of the line.
                 </p>
                 <p>
-                    Stay close. Your access to Da Difference is just around the corner—gear up to elevate your wardrobe with PooHDa—fashion that’s all about being 100% you, no compromises.
+                    Stay close. Your access to Da Difference is just around the corner—gear up to elevate your wardrobe with PooHDa—fashion that’s all about being 100%% you, no compromises.
                 </p>
             </td>
         </tr>
@@ -111,7 +127,7 @@ func sendMailGoRoutine(chanErr chan error, payload types.SubscribePayload) {
     </table>
 </body>
 </html>
-    `)
+`))
 
 	d := gomail.NewDialer("smtppro.zoho.com", 465, ZOHO_EMAIL, ZOHO_PASSWORD)
 
