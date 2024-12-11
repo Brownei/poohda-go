@@ -35,6 +35,12 @@ func (a *application) SendMail(w http.ResponseWriter, r *http.Request) {
 	a.logger.Info(payload)
 	chanErr := make(chan error, 1)
 
+	err := a.store.Waitlist.AddToWaitlist(r.Context(), payload)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("Invalid payload: %v", err))
+		return
+	}
+
 	go sendMailGoRoutine(chanErr, payload)
 
 	if err := <-chanErr; err != nil {
@@ -42,7 +48,7 @@ func (a *application) SendMail(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusConflict, err)
 		return
 	} else {
-		utils.WriteJSON(w, http.StatusOK, fmt.Sprintf("Mail sent successfully"))
+		utils.WriteJSON(w, http.StatusOK, fmt.Sprintf("%s with email: %s have joined the waitlist", payload.Name, payload.Email))
 		a.logger.Info("Sent email.......")
 	}
 }
