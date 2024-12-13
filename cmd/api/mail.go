@@ -1,11 +1,15 @@
 package api
 
 import (
+	"bytes"
+	"embed"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"text/template"
 
+	"github.com/cloudinary/cloudinary-go/v2/api/admin"
 	"github.com/go-playground/validator/v10"
 	"github.com/poohda-go/types"
 	"github.com/poohda-go/utils"
@@ -13,12 +17,34 @@ import (
 )
 
 var (
+	content       embed.FS
 	ZOHO_EMAIL    = os.Getenv("ZOHO_EMAIL")
 	ZOHO_PASSWORD = os.Getenv("ZOHO_PASSWORD")
 )
 
+type ImageUrlForMail struct {
+	LogoUrl string
+}
+
 func (a *application) SendMail(w http.ResponseWriter, r *http.Request) {
+	cwd, _ := os.Getwd()
+	var body bytes.Buffer
 	var payload types.SubscribePayload
+	cld, err := utils.InitializeCloudinary()
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	result, _ := cld.Admin.AssetByAssetID(r.Context(), admin.AssetByAssetIDParams{
+		AssetID: "b3fcb62e3a906ed8af10449f240fdf9c",
+	})
+
+	a.logger.Info(result)
+	mailImages := ImageUrlForMail{
+		LogoUrl: result.URL,
+	}
+
 	if err := utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusConflict, fmt.Errorf("Cannot be able to parse json"))
 		return
@@ -31,11 +57,21 @@ func (a *application) SendMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/public/index.html", cwd))
+	if err != nil {
+		log.Fatal("Failed to parse template:", err)
+	}
+
+	err = tmpl.Execute(&body, mailImages)
+	if err != nil {
+		log.Fatal("Failed to execute template:", err)
+	}
+
 	a.logger.Info("Sending email.......")
-	a.logger.Info(payload)
+	// a.logger.Info(body.String())
 	chanErr := make(chan error, 1)
 
-	err := a.store.Waitlist.AddToWaitlist(r.Context(), payload)
+	err = a.store.Waitlist.AddToWaitlist(r.Context(), payload)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("Invalid payload: %v", err))
 		return
@@ -54,86 +90,74 @@ func (a *application) SendMail(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendMailGoRoutine(chanErr chan error, payload types.SubscribePayload) {
-	// encoded, err := utils.ChangeFontToBase64("public/fonts/Hellion.ttf")
-	// if err != nil {
-	// 	chanErr <- err
-	// }
-
 	m := gomail.NewMessage()
+	// cwd, _ := os.Getwd()
+	// poohdaLogo := fmt.Sprintf("%s/public/PoohDa White green.png", cwd)
 	// firstName := strings.Split(payload.Name, " ")
 	m.SetHeader("From", "noreply@poohda.com")
 	m.SetHeader("To", payload.Email)
 	m.SetAddressHeader("Cc", payload.Email, payload.Name)
 	m.SetHeader("Subject", "You’re on the Waitlist to Be Da Difference")
-	m.SetBody("text/html", fmt.Sprintf(`
-    <!DOCTYPE html>
+	// m.SetBody("text/html", body.String())
+	m.SetBody("text/html", `
+<!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      @font-face {
-        font-family: 'Hellion';
-        src: url('http://localhost:8000/public/fonts/Hellion.ttf') format('truetype');
-      };
-
-      body {
-        font-family: 'Hellion', Arial, sans-serif;
-      };
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Template</title>
+  <style type="text/css">
+    @font-face {
+      font-family: 'CustomFont';
+      src: url('https://res.cloudinary.com/brownson/raw/upload/v1734014059/rw9mzwor2rzzhzgylrtc.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+  </style>
+  <!--<link href="https://res.cloudinary.com/brownson/raw/upload/v1734014059/rw9mzwor2rzzhzgylrtc.ttf" rel="stylesheet">-->
 </head>
-    <body style="font-family: Arial; line-height: 1.6; color: #333; padding: 20px; background-color: #f9f9f9;">
-    <table style="width: 100%%; max-width: 600px; margin: 0 auto; background: #000; color: #fff; border-radius: 8px; overflow: hidden;">
-        <!-- Header Section -->
-        <tr style="text-align: center;">
-            <td style="padding: 20px; background-image: url('/public/poohda.png'); background-size: cover; background-position: center;">
-                <h1 style="margin: 0; position: relative; z-index: 1;">The Leader of the Pack</h1>
-            </td>
-        </tr>
 
-        <!-- Body Section -->
-        <tr>
-            <td style="padding: 20px;">
-                <p>
-                    You made it to the waitlist to be <strong>Da Difference</strong>—the leader of the pack! That means you’ll be the first to know when our exclusive pieces go live on the PooHDa website.
-                </p>
-                <p><strong>So get ready for the launch!</strong></p>
-                <p>
-                    Every piece is crafted to break the rules and elevate your style—rare, limited, and unimagined. And you’re at the front of the line.
-                </p>
-                <p>
-                    Stay close. Your access to Da Difference is just around the corner—gear up to elevate your wardrobe with PooHDa—fashion that’s all about being 100%% you, no compromises.
-                </p>
-            </td>
-        </tr>
+<body style="color: #ffffff;  background-color: #f4f4f4; padding: 10px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #000000; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
 
-        <!-- CTA Button -->
-        <tr>
-            <td style="text-align: center; padding: 20px;">
-                <a href="#" style="
-                    background: #86EFAC; 
-                    color: #000; 
-                    text-decoration: none; 
-                    padding: 15px 30px; 
-                    font-size: 16px; 
-                    font-weight: bold; 
-                    border-radius: 5px;">
-                    Be Da Difference
-                </a>
-            </td>
-        </tr>
+    <div style="text-align: center;">
+      <img alt="PoohDa" src="https://res.cloudinary.com/brownson/image/upload/v1734001320/pmbizybnu0aeentwkcza.png"
+        style="width: 300px;  padding: 0px; margin: -50px;" />
+      <h1 style="font-family: Helvetica, Arial, sans-serif; font-size: 30px; margin-top: -50px; color: #008000;">
+        Welcome To Poohda</h1>
+    </div>
 
-        <!-- Footer Section -->
-        <tr>
-            <td style="padding: 20px; text-align: center; font-size: 14px; color: #fff;">
-                <p>Catch you soon,</p>
-                <p><strong>POOH</strong><br>Creative Director, PooHDa</p>
-            </td>
-        </tr>
-    </table>
+    <div style="line-height: 1.6;">
+      <p style="margin-bottom: 16px;">Hey Dauntless!</p>
+
+      <p style="margin-bottom: 16px;">You made it to the waitlist to be Da Difference—the leader of the pack! That means
+        you’ll be the first to know when our exclusive pieces go live on the PooHDa website.</p>
+
+      <p style="margin-bottom: 16px;">So get ready for the launch.</p>
+
+      <p style="margin-bottom: 16px;">Every piece is crafted to break the rules and elevate your style—rare, limited,
+        and unimagined. And you’re at the front of the line.</p>
+
+      <p style="margin-bottom: 16px;">Stay close. Your access to Da Difference is just around the corner—gear up to
+        elevate your wardrobe with PooHDa—fashion that’s all about being 100%% you, no compromises.</p>
+
+
+      <p style="margin-top: 40px;">
+        <span style="display: block;">Catch you soon,</span>
+        <span style="display: block; font-weight: bold;">POOH</span>
+        <span style="display: block;">Creative Director, PooHDa</span>
+      </p>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #aaa;">
+      <p>&copy; 2024 PooHDa. All rights reserved.</p>
+    </div>
+  </div>
 </body>
+
 </html>
-`))
+    `)
 
 	d := gomail.NewDialer("smtppro.zoho.com", 465, ZOHO_EMAIL, ZOHO_PASSWORD)
 

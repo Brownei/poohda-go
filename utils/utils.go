@@ -11,12 +11,17 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var Validator = validator.New()
+var (
+	Validator          = validator.New()
+	CLOUDINARY_SECRET  = os.Getenv("CLOUDINARY_SECRET")
+	CLOUDINARY_API_KEY = os.Getenv("CLOUDINARY_API_KEY ")
+)
 
 func ChangeFontToBase64(laptopPath string) (string, error) {
 	path, err := filepath.Abs(laptopPath)
@@ -120,4 +125,12 @@ func HashPassword(password string) (string, error) {
 	}
 
 	return string(hash), nil
+}
+
+func InitializeCloudinary() (*cloudinary.Cloudinary, error) {
+	fmt.Print(CLOUDINARY_API_KEY)
+	fmt.Print(CLOUDINARY_SECRET)
+	cld, err := cloudinary.NewFromParams("brownson", "491131249681159", CLOUDINARY_SECRET)
+
+	return cld, err
 }
