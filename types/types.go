@@ -18,23 +18,36 @@ type CategoryDTO struct {
 }
 
 type Clothes struct {
-	Id          int    `json:"id" `
-	Name        string `json:"name"`
-	Price       int    `json:"price"`
-	Description string `json:"description"`
-	Quantity    int    `json:"quantity"`
-	CategoryId  int    `json:"category_id"`
+	Id          int      `json:"id" `
+	Name        string   `json:"name"`
+	Price       int      `json:"price"`
+	Description string   `json:"description"`
+	Quantity    int      `json:"quantity"`
+	CategoryId  int      `json:"category_id"`
+	Pictures    []string `json:"pictures"`
 }
 
 type ClothesDTO struct {
-	CategoryId  int    `json:"category_id" validate:"required"`
-	Name        string `json:"name" validate:"required,min=3"`
-	Price       int    `json:"price" validate:"required"`
-	Description string `json:"description" validate:"required"`
-	Quantity    int    `json:"quantity" validate:"required"`
+	CategoryId  int      `json:"category_id" validate:"required"`
+	Name        string   `json:"name" validate:"required,min=3"`
+	Price       int      `json:"price" validate:"required"`
+	Description string   `json:"description" validate:"required"`
+	Quantity    int      `json:"quantity" validate:"required"`
+	Pictures    []string `json:"pictures" validate:"required"`
+}
+
+type ClothesPictures struct {
+	Id  int    `json:"id"`
+	Url string `json:"url"`
 }
 
 type LoginDto struct {
 	Username string `json:"username" validate:"required"`
 	Password string `json:"password" validate:"required"`
+}
+
+type Waitlist struct {
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Number string `json:"number"`
 }

@@ -47,3 +47,29 @@ func (s *WaitlistStore) AddToWaitlist(ctx context.Context, payload types.Subscri
 
 	return nil
 }
+
+func (s *WaitlistStore) GetAllWaitlistParticipants() ([]types.Waitlist, error) {
+	waitlst := []types.Waitlist{}
+	query := `SELECT name, email, number FROM "waitlist"`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var individualInWaiting types.Waitlist
+
+		if err := rows.Scan(
+			individualInWaiting.Name,
+			individualInWaiting.Email,
+			individualInWaiting.Number,
+		); err != nil {
+			return nil, err
+		}
+
+		waitlst = append(waitlst, individualInWaiting)
+	}
+
+	return waitlst, nil
+}

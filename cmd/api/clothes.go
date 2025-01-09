@@ -42,6 +42,18 @@ func (a *application) CreateNewClothing(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	_, err = a.store.Categories.GetOneCategory(ctx, payload.CategoryId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.WriteError(w, http.StatusConflict, fmt.Errorf("No category like this"))
+			return
+		}
+
+		fmt.Print("Errorroor")
+		utils.WriteError(w, http.StatusConflict, err)
+		return
+	}
+	a.logger.Info(payload)
 	newClothings, err := a.store.Clothes.CreateNewClothes(ctx, payload)
 	if err != nil {
 		utils.WriteError(w, http.StatusConflict, err)

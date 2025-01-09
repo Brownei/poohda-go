@@ -13,11 +13,12 @@ type Store struct {
 	}
 	Waitlist interface {
 		AddToWaitlist(ctx context.Context, payload types.SubscribePayload) error
+		GetAllWaitlistParticipants() ([]types.Waitlist, error)
 	}
 	Categories interface {
 		GetAllCategories() ([]types.Category, error)
 		CreateNewCategory(context.Context, types.CategoryDTO) (*types.Category, error)
-		GetOneCategory(context.Context, string) (*types.Category, error)
+		GetOneCategory(context.Context, int) (*types.Category, error)
 		GetAllClothesReferenceToACategory(context.Context, string) ([]types.Clothes, error)
 	}
 	Clothes interface {

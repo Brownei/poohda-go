@@ -94,11 +94,11 @@ func (s *CategoriesStore) GetAllClothesReferenceToACategory(ctx context.Context,
 	return clothings, nil
 }
 
-func (s *CategoriesStore) GetOneCategory(ctx context.Context, name string) (*types.Category, error) {
+func (s *CategoriesStore) GetOneCategory(ctx context.Context, id int) (*types.Category, error) {
 	var category types.Category
-	query := `SELECT id, name, picture FROM "category" WHERE name=$1`
+	query := `SELECT id, name, picture FROM "category" WHERE id=$1`
 
-	if err := s.db.QueryRowContext(ctx, query, name).Scan(
+	if err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&category.Id,
 		&category.Name,
 		&category.Picture,
