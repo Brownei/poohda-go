@@ -82,8 +82,8 @@ func JwtToken(email string, ctx context.Context) string {
 	secretKey := []byte(os.Getenv("SECRET_KEY"))
 	expiryTime := time.Now().Add(7 * 24 * time.Hour).Unix() // 7 days in seconds
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": email,      // Subject (user identifier)
-		"iss": "chifunds", // Issuer
+		"sub": email,    // Subject (user identifier)
+		"iss": "poohda", // Issuer
 		"exp": expiryTime,
 		"iat": time.Now().Unix(), // Issued at
 	})

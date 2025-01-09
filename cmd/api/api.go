@@ -60,6 +60,9 @@ func (a *application) Run() error {
 		utils.WriteJSON(w, http.StatusOK, fmt.Sprintf("Welcome to Poohda"))
 	})
 	r.Post("/subscribe", a.SendMail)
+	r.Route("/auth", a.AllAuthRoutes)
+	r.Route("/category", a.AllCategoryRoutes)
+	r.Route("/clothes", a.AllClothingRoutes)
 
 	// Run the server in a goroutine so it doesn't block
 	go func() {
