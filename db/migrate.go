@@ -159,10 +159,10 @@ func AddMigrations(db *sql.DB) {
 		},
 	}
 
-	_, err := migrate.Exec(db, "postgres", migrations, migrate.Down)
-	if err != nil {
-		log.Fatalf("Couldn't reset changes: %s", err)
-	}
+	// _, err := migrate.Exec(db, "postgres", migrations, migrate.Down)
+	// if err != nil {
+	// 	log.Fatalf("Couldn't reset changes: %s", err)
+	// }
 
 	up, err := migrate.Exec(db, "postgres", migrations, migrate.Up)
 	if err != nil {
