@@ -61,9 +61,9 @@ func (s *WaitlistStore) GetAllWaitlistParticipants() ([]types.Waitlist, error) {
 		var individualInWaiting types.Waitlist
 
 		if err := rows.Scan(
-			individualInWaiting.Name,
-			individualInWaiting.Email,
-			individualInWaiting.Number,
+			&individualInWaiting.Name,
+			&individualInWaiting.Email,
+			&individualInWaiting.Number,
 		); err != nil {
 			return nil, err
 		}

@@ -64,6 +64,7 @@ func (a *application) Run() error {
 	r.Route("/categories", a.AllCategoryRoutes)
 	r.Route("/clothes", a.AllClothingRoutes)
 	r.Route("/waitlist", a.AllWaitlistRoutes)
+	r.Route("/orders", a.AllOrdersRoutes)
 
 	// Run the server in a goroutine so it doesn't block
 	go func() {

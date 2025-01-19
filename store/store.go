@@ -20,11 +20,20 @@ type Store struct {
 		CreateNewCategory(context.Context, types.CategoryDTO) (*types.Category, error)
 		GetOneCategory(context.Context, int) (*types.Category, error)
 		GetAllClothesReferenceToACategory(context.Context, string) ([]types.Clothes, error)
+		EditCategory(context.Context, int, types.CategoryDTO) (*types.Category, error)
+		DeleteCategory(context.Context, int) (*types.Category, error)
 	}
 	Clothes interface {
 		CreateNewClothes(ctx context.Context, payload types.ClothesDTO) (*types.Clothes, error)
 		GetAllClothes() ([]types.Clothes, error)
-		GetOneClothes(context.Context, string) (*types.Clothes, error)
+		GetOneClothes(context.Context, int) (*types.Clothes, error)
+		EditClothes(context.Context, int) (*types.Clothes, error)
+		DeleteClothes(context.Context, int) (*types.Clothes, error)
+	}
+	Orders interface {
+		GetAllOrders() ([]types.Order, error)
+		GetASingleOrder(context.Context, int) (*types.Order, error)
+		CreateANewOrder(context.Context, types.OrderDTO) (*types.Order, error)
 	}
 }
 
@@ -34,5 +43,6 @@ func NewStore(db *sql.DB) *Store {
 		Waitlist:   &WaitlistStore{db},
 		Categories: &CategoriesStore{db},
 		Clothes:    &ClothesStore{db},
+		Orders:     &OrdersStore{db},
 	}
 }

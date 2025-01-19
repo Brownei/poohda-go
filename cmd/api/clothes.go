@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/poohda-go/types"
@@ -14,7 +15,7 @@ func (a *application) AllClothingRoutes(r chi.Router) {
 	r.Group(func(r chi.Router) {
 		r.Post("/", a.CreateNewClothing)
 		r.Get("/", a.GetAllClothings)
-		r.Get("/{name}", a.GetOneClothing)
+		r.Get("/{id}", a.GetOneClothing)
 	})
 }
 
@@ -81,8 +82,13 @@ func (a *application) GetAllClothings(w http.ResponseWriter, r *http.Request) {
 
 func (a *application) GetOneClothing(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	name := chi.URLParam(r, "name")
-	clothings, err := a.store.Clothes.GetOneClothes(ctx, name)
+	id := chi.URLParam(r, "id")
+	clotheId, err := strconv.Atoi(id)
+	if err != nil {
+		utils.WriteError(w, http.StatusConflict, err)
+		return
+	}
+	clothings, err := a.store.Clothes.GetOneClothes(ctx, clotheId)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			utils.WriteJSON(w, http.StatusOK, fmt.Sprintf("No clothing like this exists!"))

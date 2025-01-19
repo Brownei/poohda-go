@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	"log"
+	// "log"
 
 	"github.com/lib/pq"
 	"github.com/poohda-go/types"
@@ -15,7 +15,7 @@ type ClothesStore struct {
 
 func (s *ClothesStore) GetAllClothes() ([]types.Clothes, error) {
 	clothings := []types.Clothes{}
-	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, cl.category_id, array_agg(i.url) AS urls FROM "clothes" AS cl JOIN "image" AS "i" ON i.clothes_id = cl.id GROUP BY cl.id, cl.id, cl.name, cl.price, cl.description, cl.quantity, cl.category_id`
+	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, cl.category_id, array_agg(i.url) AS urls, array_agg(s.size) AS sizes FROM "clothes" AS cl JOIN "image" AS "i" ON i.clothes_id = cl.id JOIN "clothes_sizes" AS "s" ON cl.id = s.clothes_id GROUP BY  cl.id, cl.name, cl.price, cl.description, cl.quantity, cl.category_id`
 
 	rows, err := s.db.Query(query)
 	if err != nil {
@@ -33,6 +33,7 @@ func (s *ClothesStore) GetAllClothes() ([]types.Clothes, error) {
 			&clothing.Quantity,
 			&clothing.CategoryId,
 			pq.Array(&clothing.Pictures),
+			pq.Array(&clothing.Sizes),
 		); err != nil {
 			return nil, err
 		}
@@ -43,16 +44,18 @@ func (s *ClothesStore) GetAllClothes() ([]types.Clothes, error) {
 	return clothings, nil
 }
 
-func (s *ClothesStore) GetOneClothes(ctx context.Context, name string) (*types.Clothes, error) {
+func (s *ClothesStore) GetOneClothes(ctx context.Context, id int) (*types.Clothes, error) {
 	var clothing types.Clothes
-	query := `SELECT id, name, price, description, quantity FROM "clothes" WHERE name=$1`
+	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, array_agg(i.url) AS "pictures" FROM "clothes" AS cl JOIN "image" AS i ON cl.id = i.clothes_id WHERE cl.id=$1 GROUP BY cl.id, cl.name, cl.price, cl.description, cl.quantity;
+`
 
-	if err := s.db.QueryRowContext(ctx, query, name).Scan(
+	if err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&clothing.Id,
 		&clothing.Name,
 		&clothing.Price,
 		&clothing.Description,
 		&clothing.Quantity,
+		pq.Array(&clothing.Pictures),
 	); err != nil {
 		return nil, err
 	}
@@ -62,10 +65,13 @@ func (s *ClothesStore) GetOneClothes(ctx context.Context, name string) (*types.C
 
 func (s *ClothesStore) CreateNewClothes(ctx context.Context, payload types.ClothesDTO) (*types.Clothes, error) {
 	var newClothing types.Clothes
-	var newImagePictures types.ClothesPictures
-	log.Print(payload)
+	var newImagePictures types.Pictures
+	var newImageSize types.Sizes
+
+	// log.Print(payload)
 	query := `INSERT INTO "clothes" (name, price, category_id, description, quantity) VALUES ($1, $2, $3, $4, $5) RETURNING id, name,  price, category_id, description, quantity`
 	imageQuery := `INSERT INTO "image" (clothes_id, url) VALUES ($1, $2) RETURNING id, url`
+	sizeQuery := `INSERT INTO "clothes_sizes" (clothes_id, size) VALUES ($1, $2) RETURNING id, size`
 
 	err := s.db.QueryRowContext(
 		ctx,
@@ -87,6 +93,21 @@ func (s *ClothesStore) CreateNewClothes(ctx context.Context, payload types.Cloth
 		return nil, err
 	}
 
+	for _, size := range payload.Sizes {
+		err := s.db.QueryRowContext(
+			ctx,
+			sizeQuery,
+			newClothing.Id,
+			size,
+		).Scan(
+			&newImageSize.Id,
+			&newImageSize.Size,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	for _, picture := range payload.Pictures {
 		err := s.db.QueryRowContext(
 			ctx,
@@ -103,4 +124,12 @@ func (s *ClothesStore) CreateNewClothes(ctx context.Context, payload types.Cloth
 	}
 
 	return &newClothing, nil
+}
+
+func (s *ClothesStore) EditClothes(ctx context.Context, id int) (*types.Clothes, error) {
+	return nil, nil
+}
+
+func (s *ClothesStore) DeleteClothes(ctx context.Context, id int) (*types.Clothes, error) {
+	return nil, nil
 }
