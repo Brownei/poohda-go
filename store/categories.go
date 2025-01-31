@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/lib/pq"
 	"github.com/poohda-go/types"
@@ -21,6 +22,8 @@ func (s *CategoriesStore) GetAllCategories() ([]types.Category, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		var category types.Category
@@ -81,23 +84,27 @@ func (s *CategoriesStore) CreateNewCategory(ctx context.Context, payload types.C
 	return &newCategory, nil
 }
 
-func (s *CategoriesStore) GetAllClothesReferenceToACategory(ctx context.Context, categoryName string) ([]types.Clothes, error) {
+func (s *CategoriesStore) GetAllClothesReferenceToACategory(ctx context.Context, id int) ([]types.Clothes, error) {
+	var returnedId int
 	clothings := []types.Clothes{}
-	findQuery := `SELECT id FROM "category" WHERE name=$1`
-	if err := s.db.QueryRowContext(ctx, findQuery, categoryName).Scan(); err != nil {
+	findQuery := `SELECT id FROM "category" WHERE id=$1`
+	if err := s.db.QueryRowContext(ctx, findQuery, id).Scan(&returnedId); err != nil {
 		if err == sql.ErrNoRows {
+			log.Print(err)
 			return nil, fmt.Errorf("No category like this!")
 		}
 
 		return nil, err
 	}
 
-	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity FROM "clothes" AS cl JOIN "category" AS c ON cl.category_id = c.id WHERE c.name=$1`
+	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, array_agg(DISTINCT i.url) AS "pictures", array_agg(DISTINCT s.size) AS "sizes" FROM "clothes" AS cl JOIN "category" AS c ON cl.category_id = c.id LEFT JOIN "image" AS i ON cl.id = i.clothes_id LEFT JOIN "clothes_sizes" as s ON cl.id = s.clothes_id WHERE c.id=$1 GROUP BY cl.id, cl.name, cl.price, cl.description, cl.quantity;`
 
-	rows, err := s.db.Query(query, categoryName)
+	rows, err := s.db.Query(query, id)
 	if err != nil {
 		return nil, err
 	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		var clothing types.Clothes
@@ -107,6 +114,8 @@ func (s *CategoriesStore) GetAllClothesReferenceToACategory(ctx context.Context,
 			&clothing.Price,
 			&clothing.Description,
 			&clothing.Quantity,
+			pq.Array(&clothing.Pictures),
+			pq.Array(&clothing.Sizes),
 		); err != nil {
 			return nil, err
 		}

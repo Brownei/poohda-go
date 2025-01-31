@@ -16,6 +16,7 @@ func (a *application) AllClothingRoutes(r chi.Router) {
 		r.Post("/", a.CreateNewClothing)
 		r.Get("/", a.GetAllClothings)
 		r.Get("/{id}", a.GetOneClothing)
+		r.Get("/search/{search}", a.GetClothesThroughName)
 	})
 }
 
@@ -100,4 +101,17 @@ func (a *application) GetOneClothing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusOK, clothings)
+}
+
+func (a *application) GetClothesThroughName(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	searchString := chi.URLParam(r, "search")
+
+	clothes, err := a.store.Clothes.GetClothesThroughName(ctx, searchString)
+	if err != nil {
+		utils.WriteError(w, http.StatusConflict, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, clothes)
 }

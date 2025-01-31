@@ -21,6 +21,8 @@ func (s *OrdersStore) GetAllOrders() ([]types.Order, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		var order types.Order
 

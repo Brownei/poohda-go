@@ -57,6 +57,8 @@ func (s *WaitlistStore) GetAllWaitlistParticipants() ([]types.Waitlist, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		var individualInWaiting types.Waitlist
 

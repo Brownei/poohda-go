@@ -86,7 +86,12 @@ func (a *application) GetOneCategory(w http.ResponseWriter, r *http.Request) {
 func (a *application) GetAllClothingReferenceToCategory(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	categoryName := chi.URLParam(r, "category")
-	clothings, err := a.store.Categories.GetAllClothesReferenceToACategory(ctx, categoryName)
+	id, err := strconv.Atoi(categoryName)
+	if err != nil {
+		utils.WriteError(w, http.StatusConflict, fmt.Errorf("Cannot convert to int"))
+		return
+	}
+	clothings, err := a.store.Categories.GetAllClothesReferenceToACategory(ctx, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			utils.WriteJSON(w, http.StatusOK, fmt.Sprintf("No clothings in this category"))

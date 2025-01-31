@@ -15,12 +15,14 @@ type ClothesStore struct {
 
 func (s *ClothesStore) GetAllClothes() ([]types.Clothes, error) {
 	clothings := []types.Clothes{}
-	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, cl.category_id, array_agg(i.url) AS urls, array_agg(s.size) AS sizes FROM "clothes" AS cl JOIN "image" AS "i" ON i.clothes_id = cl.id JOIN "clothes_sizes" AS "s" ON cl.id = s.clothes_id GROUP BY  cl.id, cl.name, cl.price, cl.description, cl.quantity, cl.category_id`
+	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, cl.category_id, array_agg(DISTINCT i.url) AS urls, array_agg(DISTINCT s.size) AS sizes FROM "clothes" AS cl JOIN "image" AS "i" ON i.clothes_id = cl.id LEFT JOIN "clothes_sizes" AS "s" ON cl.id = s.clothes_id GROUP BY  cl.id, cl.name, cl.price, cl.description, cl.quantity, cl.category_id`
 
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		var clothing types.Clothes
@@ -46,7 +48,7 @@ func (s *ClothesStore) GetAllClothes() ([]types.Clothes, error) {
 
 func (s *ClothesStore) GetOneClothes(ctx context.Context, id int) (*types.Clothes, error) {
 	var clothing types.Clothes
-	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, array_agg(i.url) AS "pictures" FROM "clothes" AS cl JOIN "image" AS i ON cl.id = i.clothes_id WHERE cl.id=$1 GROUP BY cl.id, cl.name, cl.price, cl.description, cl.quantity;
+	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, array_agg(DISTINCT i.url) AS "pictures", array_agg(DISTINCT s.size) AS "sizes" FROM "clothes" AS cl JOIN "image" AS i ON cl.id = i.clothes_id LEFT JOIN "clothes_sizes" as "s" ON s.clothes_id = cl.id WHERE cl.id=$1 GROUP BY cl.id, cl.name, cl.price, cl.description, cl.quantity;
 `
 
 	if err := s.db.QueryRowContext(ctx, query, id).Scan(
@@ -56,6 +58,7 @@ func (s *ClothesStore) GetOneClothes(ctx context.Context, id int) (*types.Clothe
 		&clothing.Description,
 		&clothing.Quantity,
 		pq.Array(&clothing.Pictures),
+		pq.Array(&clothing.Sizes),
 	); err != nil {
 		return nil, err
 	}
@@ -124,6 +127,38 @@ func (s *ClothesStore) CreateNewClothes(ctx context.Context, payload types.Cloth
 	}
 
 	return &newClothing, nil
+}
+
+func (s *ClothesStore) GetClothesThroughName(ctx context.Context, searchString string) ([]types.Clothes, error) {
+	clothes := []types.Clothes{}
+	query := `SELECT cl.id, cl.name, cl.price, cl.description, cl.quantity, array_agg(DISTINCT i.url) AS "pictures", array_agg(DISTINCT s.size) AS "sizes" FROM "clothes" AS cl JOIN "image" AS i ON cl.id = i.clothes_id LEFT JOIN "clothes_sizes" as "s" ON s.clothes_id = cl.id WHERE cl.name ILIKE $1 GROUP BY cl.id, cl.name, cl.price, cl.description, cl.quantity;`
+
+	rows, err := s.db.QueryContext(ctx, query, "%"+searchString+"%")
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var clothing types.Clothes
+
+		if err := rows.Scan(
+			&clothing.Id,
+			&clothing.Name,
+			&clothing.Price,
+			&clothing.Description,
+			&clothing.Quantity,
+			pq.Array(&clothing.Pictures),
+			pq.Array(&clothing.Sizes),
+		); err != nil {
+			return nil, err
+		}
+
+		clothes = append(clothes, clothing)
+	}
+
+	return clothes, nil
 }
 
 func (s *ClothesStore) EditClothes(ctx context.Context, id int) (*types.Clothes, error) {
