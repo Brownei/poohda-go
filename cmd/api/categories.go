@@ -19,7 +19,7 @@ func (a *application) AllCategoryRoutes(r chi.Router) {
 		r.Get("/{category}", a.GetOneCategory)
 		r.Get("/{category}/clothes", a.GetAllClothingReferenceToCategory)
 		r.Put("/{category}", a.EditCategory)
-		// r.Delete("/{category}", a.DeleteCategory)
+		r.Delete("/{category}", a.DeleteCategory)
 	})
 }
 
@@ -128,6 +128,24 @@ func (a *application) EditCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	category, err := a.store.Categories.EditCategory(ctx, id, payload)
+	if err != nil {
+		utils.WriteError(w, http.StatusConflict, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusAccepted, category)
+}
+
+func (a *application) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	categoryName := chi.URLParam(r, "category")
+	ctx := r.Context()
+	id, err := strconv.Atoi(categoryName)
+	if err != nil {
+		utils.WriteError(w, http.StatusConflict, fmt.Errorf("Cannot convert to int"))
+		return
+	}
+
+	category, err := a.store.Categories.DeleteCategory(ctx, id)
 	if err != nil {
 		utils.WriteError(w, http.StatusConflict, err)
 		return

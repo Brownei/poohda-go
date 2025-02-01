@@ -184,5 +184,63 @@ func (s *CategoriesStore) EditCategory(ctx context.Context, id int, payload type
 }
 
 func (s *CategoriesStore) DeleteCategory(ctx context.Context, id int) (*types.Category, error) {
-	return nil, nil
+	tx, err := s.db.BeginTx(ctx, nil) // Start a transaction
+	if err != nil {
+		return nil, err
+	}
+
+	// 1️⃣ Get the clothes details before deleting
+	var category types.Category
+	images := []string{}
+	query := `SELECT id, name, description, is_featured FROM "category" WHERE id=$1`
+	err = tx.QueryRowContext(ctx, query, id).Scan(
+		&category.Id,
+		&category.Name,
+		&category.Description,
+		&category.IsFeatured,
+	)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 2️⃣ Get related images
+	imageQuery := `SELECT url FROM "category_image" WHERE category_id=$1`
+	rows, err := tx.QueryContext(ctx, imageQuery, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var img string
+		if err := rows.Scan(&img); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		images = append(images, img)
+	}
+	category.Pictures = images
+
+	// 4️⃣ Delete related images
+	_, err = tx.ExecContext(ctx, `DELETE FROM "category_image" WHERE category_id=$1`, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 6️⃣ Delete the clothes entry
+	_, err = tx.ExecContext(ctx, `DELETE FROM "category" WHERE id=$1`, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &category, nil // Return deleted item details
 }

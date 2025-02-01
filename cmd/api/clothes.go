@@ -15,6 +15,7 @@ func (a *application) AllClothingRoutes(r chi.Router) {
 	r.Group(func(r chi.Router) {
 		r.Post("/", a.CreateNewClothing)
 		r.Get("/", a.GetAllClothings)
+		r.Delete("/{id}", a.DeleteOneClothing)
 		r.Get("/{id}", a.GetOneClothing)
 		r.Get("/search/{search}", a.GetClothesThroughName)
 	})
@@ -114,4 +115,22 @@ func (a *application) GetClothesThroughName(w http.ResponseWriter, r *http.Reque
 	}
 
 	utils.WriteJSON(w, http.StatusOK, clothes)
+}
+
+func (a *application) DeleteOneClothing(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	idString := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		utils.WriteError(w, http.StatusConflict, err)
+		return
+	}
+
+	clothihgToDelete, err := a.store.Clothes.DeleteClothes(ctx, id)
+	if err != nil {
+		utils.WriteError(w, http.StatusConflict, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusAccepted, clothihgToDelete)
 }

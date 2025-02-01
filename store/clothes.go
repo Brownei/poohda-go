@@ -162,9 +162,98 @@ func (s *ClothesStore) GetClothesThroughName(ctx context.Context, searchString s
 }
 
 func (s *ClothesStore) EditClothes(ctx context.Context, id int) (*types.Clothes, error) {
+	// query := `UPDATE "clothes" SET name=$1, price=$2, category_id=$3, description=$4, quantity=$5 WHERE id=$6 RETURNING id, price, category_id, description, quantity`
+	// imageQuery := `UPDATE "image" SET url`
 	return nil, nil
 }
 
 func (s *ClothesStore) DeleteClothes(ctx context.Context, id int) (*types.Clothes, error) {
-	return nil, nil
+	tx, err := s.db.BeginTx(ctx, nil) // Start a transaction
+	if err != nil {
+		return nil, err
+	}
+
+	// 1️⃣ Get the clothes details before deleting
+	var clothing types.Clothes
+	images := []string{}
+	query := `SELECT id, name, price, category_id, description, quantity FROM "clothes" WHERE id=$1`
+	err = tx.QueryRowContext(ctx, query, id).Scan(
+		&clothing.Id,
+		&clothing.Name,
+		&clothing.Price,
+		&clothing.CategoryId,
+		&clothing.Description,
+		&clothing.Quantity,
+	)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 2️⃣ Get related images
+	imageQuery := `SELECT url FROM "image" WHERE clothes_id=$1`
+	rows, err := tx.QueryContext(ctx, imageQuery, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var img string
+		if err := rows.Scan(&img); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		images = append(images, img)
+	}
+	clothing.Pictures = images
+
+	// 3️⃣ Get related sizes
+	sizeQuery := `SELECT size FROM "clothes_sizes" WHERE clothes_id=$1`
+	sizeRows, err := tx.QueryContext(ctx, sizeQuery, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	defer sizeRows.Close()
+
+	var sizes []string
+	for sizeRows.Next() {
+		var size string
+		if err := sizeRows.Scan(&size); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		sizes = append(sizes, size)
+	}
+	clothing.Sizes = sizes
+
+	// 4️⃣ Delete related images
+	_, err = tx.ExecContext(ctx, `DELETE FROM "image" WHERE clothes_id=$1`, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 5️⃣ Delete related sizes
+	_, err = tx.ExecContext(ctx, `DELETE FROM "clothes_sizes" WHERE clothes_id=$1`, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 6️⃣ Delete the clothes entry
+	_, err = tx.ExecContext(ctx, `DELETE FROM "clothes" WHERE id=$1`, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &clothing, nil // Return deleted item details
 }
